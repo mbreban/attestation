@@ -7,6 +7,9 @@ import (
 	"encoding/asn1"
 	"errors"
 	"fmt"
+
+	"golang.org/x/crypto/cryptobyte"
+	cryptobyte_asn1 "golang.org/x/crypto/cryptobyte/asn1"
 )
 
 var errNoData = errors.New("attestation: no data")
@@ -418,12 +421,7 @@ func newAuthorizationList(in *authorizationList) (*AuthorizationList, error) {
 		if err != nil {
 			return nil, fmt.Errorf("RootOfTrust: %v", err)
 		}
-		out.RootOfTrust = &RootOfTrust{
-			VerifiedBootKey:   rot.VerifiedBootKey,
-			DeviceLocked:      rot.DeviceLocked,
-			VerifiedBootState: VerifiedBootState(rot.VerifiedBootState),
-			VerifiedBootHash:  rot.VerifiedBootHash,
-		}
+		out.RootOfTrust = rot
 	}
 
 	out.OsVersion, err = newOptionnalInt(in.OsVersion)
@@ -510,14 +508,44 @@ func parseKeyDescription(in *keyDescription) (*KeyDescription, error) {
 	return out, nil
 }
 
-func parseRootOfTrust(derBytes []byte) (*rootOfTrust, error) {
-	var rot rootOfTrust
-	if rest, err := asn1.Unmarshal(derBytes, &rot); err != nil {
-		return nil, err
-	} else if len(rest) != 0 {
-		return nil, errors.New("attestation: trailing data after RootOfTrust")
+func parseRootOfTrust(derBytes []byte) (*RootOfTrust, error) {
+	rot := &RootOfTrust{}
+
+	input := cryptobyte.String(derBytes)
+	// we read the SEQUENCE including length and tag bytes so that
+	// we can populate RootOfTrust.Raw, before unwrapping the
+	// SEQUENCE so it can be operated on
+	if !input.ReadASN1Element(&input, cryptobyte_asn1.SEQUENCE) {
+		return nil, errors.New("attestation: malformed RootOfTrust")
 	}
-	return &rot, nil
+	rot.Raw = input
+	if !input.ReadASN1(&input, cryptobyte_asn1.SEQUENCE) {
+		return nil, errors.New("attestation: malformed RootOfTrust")
+	}
+
+	var vbk cryptobyte.String
+	if !input.ReadASN1(&vbk, cryptobyte_asn1.OCTET_STRING) {
+		return rot, errors.New("attestation: malformed VerifiedBootKey field")
+	}
+	rot.VerifiedBootKey = vbk
+
+	if !readASN1Boolean(&input, &rot.DeviceLocked) {
+		return rot, errors.New("attestation: malformed DeviceLocked field")
+	}
+
+	var vbs int
+	if !input.ReadASN1Enum(&vbs) {
+		return rot, errors.New("attestation: malformed VerifiedBootState field")
+	}
+	rot.VerifiedBootState = VerifiedBootState(vbs)
+
+	var vbh cryptobyte.String
+	var present bool
+	if input.ReadOptionalASN1(&vbh, &present, cryptobyte_asn1.OCTET_STRING) {
+		rot.VerifiedBootHash = vbh
+	}
+
+	return rot, nil
 }
 
 func marshalRoT(rot *RootOfTrust) (derBytes []byte, err error) {
@@ -534,6 +562,24 @@ func marshalRoT(rot *RootOfTrust) (derBytes []byte, err error) {
 	}
 
 	return derBytes, nil
+}
+
+func readASN1Boolean(s *cryptobyte.String, out *bool) bool {
+	var bytes cryptobyte.String
+	if !s.ReadASN1(&bytes, cryptobyte_asn1.BOOLEAN) || len(bytes) != 1 {
+		return false
+	}
+
+	switch bytes[0] {
+	case 0:
+		*out = false
+	case 0x01, 0xff:
+		*out = true
+	default:
+		return false
+	}
+
+	return true
 }
 
 func parseAttestationApplicationId(derBytes []byte) (*attestationApplicationId, error) {

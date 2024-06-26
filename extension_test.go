@@ -5,6 +5,8 @@ import (
 	"encoding/asn1"
 	"reflect"
 	"testing"
+
+	"golang.org/x/crypto/cryptobyte"
 )
 
 func Test_createAuthorizationList(t *testing.T) {
@@ -337,6 +339,61 @@ func Test_parseRootOfTrust(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("parseRootOfTrust() = %+v, want %+v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_readASN1Boolean(t *testing.T) {
+	var input = cryptobyte.String([]byte{
+		asn1.TagBoolean, 0x01, 0xaa,
+		asn1.TagBoolean, 0x01, 0x00,
+		asn1.TagBoolean, 0x01, 0xff,
+		asn1.TagBoolean, 0x01, 0x01,
+	})
+	var outBool bool
+
+	type args struct {
+		s   *cryptobyte.String
+		out *bool
+	}
+	type want struct {
+		ret bool
+		out bool
+	}
+	tests := []struct {
+		name string
+		args args
+		want want
+	}{
+		{
+			name: "shouldFailWhenInvalid",
+			args: args{s: &input, out: &outBool},
+			want: want{ret: false, out: false},
+		},
+		{
+			name: "shouldSucceedWith0x00",
+			args: args{s: &input, out: &outBool},
+			want: want{ret: true, out: false},
+		},
+		{
+			name: "shouldSucceedWith0xFF",
+			args: args{s: &input, out: &outBool},
+			want: want{ret: true, out: true},
+		},
+		{
+			name: "shouldSucceedWith0x01",
+			args: args{s: &input, out: &outBool},
+			want: want{ret: true, out: true},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := readASN1Boolean(tt.args.s, tt.args.out); got != tt.want.ret {
+				t.Errorf("readASN1Boolean() = %v, want %v", got, tt.want.ret)
+			}
+			if *tt.args.out != tt.want.out {
+				t.Errorf("readASN1Boolean() = %v, want %v", *tt.args.out, tt.want.out)
 			}
 		})
 	}
