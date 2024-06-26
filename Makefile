@@ -11,6 +11,7 @@ help:
 	@echo '    make tidy            Tidy up modules.'
 	@echo '    make update          Update dependencies.'
 	@echo '    make test            Run tests.'
+	@echo '    make test-samples    Run sample tests.'
 	@echo
 
 .PHONY: install
@@ -29,3 +30,7 @@ update:
 .PHONY: test
 test:
 	go test ./ -cover
+
+.PHONY: test-samples
+test-samples:
+	go test ./ -tags=samples
