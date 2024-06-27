@@ -2,6 +2,8 @@
 
 Package attestation implements ASN.1 encoding/decoding of Android Key attestation extension.
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/mbreban/attestation.svg)](https://pkg.go.dev/github.com/mbreban/attestation)
+
 ## Code example
 
 ```go
