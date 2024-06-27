@@ -7,10 +7,15 @@ help:
 	@echo 'Management commands for attestation:'
 	@echo
 	@echo 'Usage:'
+	@echo '    make install         Install attestation-cli binary.'
 	@echo '    make tidy            Tidy up modules.'
 	@echo '    make update          Update dependencies.'
 	@echo '    make test            Run tests.'
 	@echo
+
+.PHONY: install
+install:
+	go install ./cmd/attestation-cli
 
 .PHONY: tidy
 tidy:

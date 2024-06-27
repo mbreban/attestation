@@ -75,6 +75,15 @@ Use `go get` to install the latest version of the package.
 go get -u github.com/mbreban/attestation@latest
 ```
 
+## CLI tool
+
+`attestation-cli` is a command-line tool that prints the contents of the Key Attestation extension.
+
+```sh
+go install ./cmd/attestation-cli
+attestation-cli -format der certificate.der.x509
+```
+
 ## Testing
 
 ```sh
