@@ -145,7 +145,7 @@ func parse(names []string, format Format, jsonEncoded bool, out string) {
 		for i, crt := range crts {
 			ext := attestation.GetKeyExtension(crt)
 			if ext == nil {
-				fatalf("failed to get key extension in %s\n", name)
+				fatalf("failed to get key extension (OID: %s) in %s\n", attestation.OIDKeyAttestationExtension.String(), name)
 			}
 
 			keyDesc, err := attestation.ParseExtension(ext.Value)
