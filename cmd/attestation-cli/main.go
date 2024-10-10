@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/mbreban/attestation"
+	"github.com/mbreban/attestation/cmd/attestation-cli/version"
 )
 
 func fatalln(a ...any) {
@@ -105,11 +106,21 @@ func main() {
 		}
 
 		parse(parseCmd.Args(), format, jsonEncoded, out)
+	case "version":
+		printVersion()
 	case "help":
 		fallthrough
 	default:
 		usage()
 	}
+}
+
+func printVersion() {
+	fmt.Println("Build Date:", version.BuildDate)
+	fmt.Println("Git Commit:", version.GitCommit)
+	fmt.Println("Version:", version.Version)
+	fmt.Println("Go Version:", version.GoVersion)
+	fmt.Println("OS / Arch:", version.OsArch)
 }
 
 func parse(names []string, format Format, jsonEncoded bool, out string) {
