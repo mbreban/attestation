@@ -64,21 +64,56 @@ func (p *printer) Printf(format string, a ...any) (n int, err error) {
 	return p.w.WriteString(str)
 }
 
-func main() {
-	var output io.StringWriter = os.Stdout
+func usage() {
+	fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
+	fmt.Fprintf(flag.CommandLine.Output(), "  attestation-cli [command]\n")
+	fmt.Fprintf(flag.CommandLine.Output(), "\nAvailable commands:\n")
+	fmt.Fprintf(flag.CommandLine.Output(), "  help        Show this help\n")
+	fmt.Fprintf(flag.CommandLine.Output(), "  parse       Parse the key attestation extension contained in an X.509 certificate if present\n")
+	fmt.Fprintf(flag.CommandLine.Output(), "  version     Print the version number\n")
+}
 
+func main() {
 	var format = Format("PEM")
 	var jsonEncoded bool
 	var out string
 
-	flag.Var(&format, "format", "X.509 certificate format (one of PEM or DER)")
-	flag.BoolVar(&jsonEncoded, "json", false, "Encode output in JSON format")
-	flag.StringVar(&out, "out", "", "Output file")
-	flag.Parse()
-
-	if flag.NArg() < 1 {
-		flag.Usage()
+	parseCmd := flag.NewFlagSet("parse", flag.ExitOnError)
+	parseCmd.Var(&format, "format", "X.509 certificate format (one of PEM or DER)")
+	parseCmd.BoolVar(&jsonEncoded, "json", false, "Encode output in JSON format")
+	parseCmd.StringVar(&out, "out", "", "Output file")
+	parseCmd.Usage = func() {
+		fmt.Fprintf(parseCmd.Output(), "Usage of %s:\n", parseCmd.Name())
+		fmt.Fprintf(parseCmd.Output(), "  attestation-cli  %s [flag]... [file]...\n", parseCmd.Name())
+		fmt.Fprintf(parseCmd.Output(), "\nFlags:\n")
+		parseCmd.PrintDefaults()
 	}
+
+	if len(os.Args) < 2 {
+		usage()
+		os.Exit(1)
+	}
+
+	switch os.Args[1] {
+	case "parse":
+		if err := parseCmd.Parse(os.Args[2:]); err != nil {
+			fatalln(err)
+		}
+
+		if parseCmd.NArg() < 1 {
+			parseCmd.Usage()
+		}
+
+		parse(parseCmd.Args(), format, jsonEncoded, out)
+	case "help":
+		fallthrough
+	default:
+		usage()
+	}
+}
+
+func parse(names []string, format Format, jsonEncoded bool, out string) {
+	var output io.StringWriter = os.Stdout
 
 	if out != "" {
 		f, err := os.Create(out)
@@ -90,7 +125,7 @@ func main() {
 		output = f
 	}
 
-	for _, name := range flag.Args() {
+	for _, name := range names {
 		bytes, err := os.ReadFile(name)
 		if err != nil {
 			fatalln(err)

@@ -83,7 +83,7 @@ go get -u github.com/mbreban/attestation@latest
 
 ```sh
 go install ./cmd/attestation-cli
-attestation-cli -format der certificate.der.x509
+attestation-cli parse -format der certificate.der.x509
 ```
 
 ## Testing
